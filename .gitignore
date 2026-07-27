@@ -1,0 +1,16 @@
+# STM32CubeIDE workspace metadata
+.metadata/
+
+# STM32CubeIDE build output
+**/Debug/
+**/Release/
+
+# Launch configurations
+*.launch
+
+# Temporary build files
+*.o
+*.d
+*.su
+*.cyclo
+*.tmp
