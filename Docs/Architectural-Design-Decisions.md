@@ -13,12 +13,12 @@ It does not attempt to classify an event as a pothole, speed bump, road joint, o
 
 The project therefore concentrates on:
 
-- real-time sensor acquisition
-- impact candidate detection
-- accurate event timestamps
-- GNSS position acquisition
-- FreeRTOS synchronization and inter-task communication
-- embedded diagnostics and fault handling
+- Real-Time Sensor Acquisition
+- Impact Candidate Detection
+- Accurate Event Timestamps
+- GNSS Position Acquisition
+- FreeRTOS Synchronization and Inter-Task Communication
+- Embedded Diagnostics and Fault Handling
 
 
 ## Target Hardware
@@ -55,7 +55,7 @@ Relevant documentation:
 - [ICM-20948 product page and datasheet](https://www.invensense.tdk.com/en-us/products/9-axis/icm-20948/)
 - [Pimoroni ICM-20948 breakout board](https://shop.pimoroni.com/products/icm20948)
 - [Quectel L80 Hardware Design](https://quectel.com/content/uploads/2021/03/Quectel_L80_Hardware_Design_V1.5.pdf)
-- [Quectel GNSS protocol documentation](https://www.quectel.com/product/gnss-l86/)
+- [Quectel LG77L(C), Lx0, Lx6 and LC86L Series GNSS Protocol Specification V2.2](https://www.quectel.com/content/uploads/2024/04/Quectel_LG77LCLx0Lx6LC86L_Series_GNSS_Protocol_Specification_V2.2.pdf)
 
 
 ## FreeRTOS Interface
@@ -90,7 +90,7 @@ The clock tree produces a 216 MHz system clock. APB prescalers remain within the
 
 HSE does not replace GNSS PPS. It improves short-term local timing stability between PPS edges, while PPS remains the external timing reference used to observe and correct local timer error.
 
-The board-level clock arrangement is documented in [UM1974 — STM32 Nucleo-144 boards user manual](https://www.st.com/resource/en/user_manual/dm00244518-stm32-nucleo-144-boards-mb1137-stmicroelectronics.pdf).
+The 8 MHz MCO clock connection is documented in [UM1974, Section 7.8.1 — OSC clock supply, page 26](https://www.st.com/resource/en/user_manual/dm00244518-stm32-nucleo-144-boards-mb1137-stmicroelectronics.pdf#page=26).
 
 
 ## HAL and FreeRTOS Time Bases
@@ -122,16 +122,16 @@ This keeps `main.c` small, separates generated initialization by responsibility,
 
 The following topics have not yet been finalized:
 
-- IMU and GNSS peripheral assignment
-- FreeRTOS task and communication architecture
-- IMU sampling rate and filtering
-- impact detection algorithm and thresholds
-- GNSS NMEA sentence selection and parsing
-- timer and input-capture configuration for PPS
-- high-resolution timestamp representation
-- PPS synchronization and clock-correction algorithm
-- logging architecture
-- watchdog and fault-handling strategy
-- event storage and host-side tools
+- IMU and GNSS Peripheral Assignment
+- FreeRTOS Task and Communication Architecture
+- IMU Sampling Rate and Filtering
+- Impact Detection Algorithm and Thresholds
+- GNSS NMEA Sentence Selection and Parsing
+- Timer and Input-Capture Configuration for PPS
+- High-Resolution Timestamp Representation
+- PPS Synchronization and Clock-Correction Algorithm
+- Logging Architecture
+- Watchdog and Fault-Handling Strategy
+- Event Storage and Host-Side Tools
 
 These topics will receive their own sections after they are discussed and validated.
