@@ -1,9 +1,82 @@
 /**
  * @file console.c
- * @brief Standard output redirection to USART3.
+ * @brief Thread-safe standard output redirection to USART3.
  */
 
+#include "console.h"
 #include "usart.h"
+
+#include "FreeRTOS.h"
+#include "semphr.h"
+
+#include <stdarg.h>
+#include <stdio.h>
+
+/** Maximum length of one complete console message. */
+#define CONSOLE_MESSAGE_BUFFER_SIZE 256U
+
+/** Mutex that protects USART3 console transmissions. */
+static SemaphoreHandle_t console_mutex;
+
+/**
+ * @brief Create the mutex used to protect console output.
+ *
+ * @return true if the mutex was created successfully; otherwise false.
+ */
+bool Console_Init(void)
+{
+    console_mutex = xSemaphoreCreateMutex();
+
+    return (console_mutex != NULL);
+}
+
+/**
+ * @brief Format and transmit one complete console message.
+ *
+ * The complete message is prepared before the console mutex is taken. This
+ * prevents output from another task from appearing in the middle of a line.
+ *
+ * @param format printf-style format string.
+ *
+ * @return Number of transmitted characters, or -1 if formatting or
+ *         transmission failed.
+ */
+int Console_Printf(const char *format, ...)
+{
+    char message[CONSOLE_MESSAGE_BUFFER_SIZE];
+    HAL_StatusTypeDef transmit_status;
+    va_list arguments;
+    int length;
+
+    if (format == NULL)
+    {
+        return -1;
+    }
+
+    va_start(arguments, format);
+    length = vsnprintf(message, sizeof(message), format, arguments);
+    va_end(arguments);
+
+    if ((length < 0) || (length >= (int)sizeof(message)))
+    {
+        return -1;
+    }
+
+    if ((console_mutex != NULL) &&
+        (xSemaphoreTake(console_mutex, portMAX_DELAY) != pdTRUE))
+    {
+        return -1;
+    }
+
+    transmit_status = HAL_UART_Transmit(&huart3, (uint8_t *)message, (uint16_t)length, HAL_MAX_DELAY);
+
+    if (console_mutex != NULL)
+    {
+        xSemaphoreGive(console_mutex);
+    }
+
+    return (transmit_status == HAL_OK) ? length : -1;
+}
 
 /**
  * @brief Write standard output data to USART3.
@@ -22,6 +95,8 @@
  */
 int _write(int file, char *ptr, int len)
 {
+    HAL_StatusTypeDef transmit_status;
+
     (void)file;
 
     if ((ptr == NULL) || (len <= 0))
@@ -29,8 +104,20 @@ int _write(int file, char *ptr, int len)
         return 0;
     }
 
-    if (HAL_UART_Transmit(&huart3, (uint8_t *)ptr, (uint16_t)len,
-                          HAL_MAX_DELAY) != HAL_OK)
+    if ((console_mutex != NULL) &&
+        (xSemaphoreTake(console_mutex, portMAX_DELAY) != pdTRUE))
+    {
+        return -1;
+    }
+
+    transmit_status = HAL_UART_Transmit(&huart3, (uint8_t *)ptr, (uint16_t)len, HAL_MAX_DELAY);
+
+    if (console_mutex != NULL)
+    {
+        xSemaphoreGive(console_mutex);
+    }
+
+    if (transmit_status != HAL_OK)
     {
         return -1;
     }

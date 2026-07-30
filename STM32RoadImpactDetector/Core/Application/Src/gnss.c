@@ -5,6 +5,7 @@
 
 #include "gnss.h"
 
+#include "console.h"
 #include "time_capture.h"
 #include "usart.h"
 
@@ -20,6 +21,9 @@
 
 /** Maximum length of one NMEA sentence, including line termination. */
 #define GNSS_NMEA_SENTENCE_SIZE 128U
+
+/** Maximum accepted age of a GNSS fix relative to an IMU capture. */
+#define GNSS_MAX_CAPTURE_OFFSET_US 2000000U
 
 /**
  * @brief Indices of the GGA fields used by the parser.
@@ -57,6 +61,9 @@ static bool gnss_nmea_active;
 /** Latest valid GNSS position associated with a PPS edge. */
 static GNSS_Fix gnss_latest_fix;
 
+/** Valid GNSS position preceding the latest position. */
+static GNSS_Fix gnss_previous_fix;
+
 /**
  * @brief Parse a complete GGA sentence and print valid coordinates.
  *
@@ -66,13 +73,16 @@ static void GNSS_ParseGga(char *sentence)
 {
     char *fields[GNSS_GGA_FIELD_COUNT];
     GNSS_Fix new_fix = {0};
-    TimeCapture_Event pps;
+    TimeCapture_Event pps = {0};
     uint8_t field_count = 1U;
 
-    if (strncmp(sentence, "$GNGGA,", 7U) != 0)
+    if ((strncmp(sentence, "$GNGGA,", 7U) != 0) &&
+        (strncmp(sentence, "$GPGGA,", 7U) != 0))
     {
         return;
     }
+
+    Console_Printf("GNSS RX: %s", sentence);
 
     fields[0] = sentence;
 
@@ -86,13 +96,24 @@ static void GNSS_ParseGga(char *sentence)
         }
     }
 
-    if ((field_count < GNSS_GGA_FIELD_COUNT) ||
-        (fields[GNSS_GGA_FIELD_LATITUDE][0] == '\0') ||
+    if (field_count < GNSS_GGA_FIELD_COUNT)
+    {
+        Console_Printf("GNSS: incomplete GGA sentence\r\n");
+        return;
+    }
+
+    if (fields[GNSS_GGA_FIELD_FIX_QUALITY][0] == '0')
+    {
+        Console_Printf("GNSS: GGA received, but satellite fix is not valid\r\n");
+        return;
+    }
+
+    if ((fields[GNSS_GGA_FIELD_LATITUDE][0] == '\0') ||
         (fields[GNSS_GGA_FIELD_LATITUDE_DIRECTION][0] == '\0') ||
         (fields[GNSS_GGA_FIELD_LONGITUDE][0] == '\0') ||
-        (fields[GNSS_GGA_FIELD_LONGITUDE_DIRECTION][0] == '\0') ||
-        (fields[GNSS_GGA_FIELD_FIX_QUALITY][0] == '0'))
+        (fields[GNSS_GGA_FIELD_LONGITUDE_DIRECTION][0] == '\0'))
     {
+        Console_Printf("GNSS: GGA fix has no coordinates\r\n");
         return;
     }
 
@@ -107,12 +128,17 @@ static void GNSS_ParseGga(char *sentence)
     new_fix.pps_sequence = pps.sequence;
 
     taskENTER_CRITICAL();
+    gnss_previous_fix = gnss_latest_fix;
     gnss_latest_fix = new_fix;
     taskEXIT_CRITICAL();
 
     if (new_fix.valid)
     {
-        printf("GNSS fix: UTC=%s, PPS=%lu, position=%s %c, %s %c\r\n", new_fix.utc_time, (unsigned long)new_fix.pps_sequence, new_fix.latitude, new_fix.latitude_direction, new_fix.longitude, new_fix.longitude_direction);
+        Console_Printf("GNSS fix: UTC=%s, PPS=%lu, position=%s %c, %s %c\r\n", new_fix.utc_time, (unsigned long)new_fix.pps_sequence, new_fix.latitude, new_fix.latitude_direction, new_fix.longitude, new_fix.longitude_direction);
+    }
+    else
+    {
+        Console_Printf("GNSS: valid GGA received, but PPS is unavailable\r\n");
     }
 }
 
@@ -182,14 +208,16 @@ static void GNSS_Task(void *argument)
 
     (void)argument;
 
-    printf("GNSS: starting UART DMA reception\r\n");
+    Console_Printf("GNSS: starting UART DMA reception\r\n");
 
     if (HAL_UARTEx_ReceiveToIdle_DMA(&huart2, gnss_rx_dma_buffer, GNSS_RX_DMA_BUFFER_SIZE) != HAL_OK)
     {
-        printf("GNSS: failed to start UART DMA reception\r\n");
+        Console_Printf("GNSS: failed to start UART DMA reception\r\n");
         vTaskDelete(NULL);
         return;
     }
+
+    Console_Printf("GNSS: UART DMA reception started successfully\r\n");
 
     for (;;)
     {
@@ -231,23 +259,52 @@ bool GNSS_Init(void)
 }
 
 /**
- * @brief Copy the latest valid GNSS fix.
+ * @brief Find the most recent GNSS fix preceding a TIM2 capture.
  *
- * @param fix Pointer to the destination structure.
- * @return true if a valid GNSS fix is available; otherwise false.
+ * Unsigned subtraction also handles a TIM2 counter overflow. Both the GNSS
+ * PPS and IMU interrupt are captured by the same 1 MHz TIM2 counter, so the
+ * resulting difference is expressed in microseconds.
+ *
+ * @param capture TIM2 capture value of the IMU event.
+ * @param fix Pointer to the destination GNSS fix.
+ * @param offset_us Pointer to the event offset after PPS in microseconds.
+ * @return true if a suitable GNSS fix was found; otherwise false.
  */
-bool GNSS_GetLatestFix(GNSS_Fix *fix)
+bool GNSS_GetFixForCapture(uint32_t capture, GNSS_Fix *fix, uint32_t *offset_us)
 {
-    if (fix == NULL)
+    GNSS_Fix latest;
+    GNSS_Fix previous;
+    uint32_t latest_offset;
+    uint32_t previous_offset;
+
+    if ((fix == NULL) || (offset_us == NULL))
     {
         return false;
     }
 
     taskENTER_CRITICAL();
-    *fix = gnss_latest_fix;
+    latest = gnss_latest_fix;
+    previous = gnss_previous_fix;
     taskEXIT_CRITICAL();
 
-    return fix->valid;
+    latest_offset = capture - latest.pps_capture;
+    previous_offset = capture - previous.pps_capture;
+
+    if (latest.valid && (latest_offset <= GNSS_MAX_CAPTURE_OFFSET_US))
+    {
+        *fix = latest;
+        *offset_us = latest_offset;
+        return true;
+    }
+
+    if (previous.valid && (previous_offset <= GNSS_MAX_CAPTURE_OFFSET_US))
+    {
+        *fix = previous;
+        *offset_us = previous_offset;
+        return true;
+    }
+
+    return false;
 }
 
 /**
@@ -269,7 +326,19 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
         return;
     }
 
-    gnss_dma_write_position = (Size < GNSS_RX_DMA_BUFFER_SIZE) ? Size : 0U;
+    if (Size > GNSS_RX_DMA_BUFFER_SIZE)
+    {
+        return;
+    }
+
+    if (Size == GNSS_RX_DMA_BUFFER_SIZE)
+    {
+        gnss_dma_write_position = 0U;
+    }
+    else
+    {
+        gnss_dma_write_position = Size;
+    }
 
     vTaskNotifyGiveFromISR(gnss_task_handle, &higher_priority_task_woken);
     portYIELD_FROM_ISR(higher_priority_task_woken);

@@ -21,6 +21,7 @@ typedef struct
     int16_t gyroscope_y;        /**< Raw angular velocity around the Y axis. */
     int16_t gyroscope_z;        /**< Raw angular velocity around the Z axis. */
     int16_t temperature;        /**< Raw internal temperature sensor value. */
+    float acceleration_magnitude_g; /**< Total acceleration magnitude in g. */
     uint32_t interrupt_capture; /**< TIM2 counter value captured on the IMU INT edge. */
     uint32_t interrupt_sequence; /**< Number of IMU INT edges captured since startup. */
     bool valid;                 /**< True when the measurement and timestamp are valid. */

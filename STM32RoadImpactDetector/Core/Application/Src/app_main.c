@@ -4,6 +4,9 @@
  */
 
 #include "app_main.h"
+#include "console.h"
+#include "gnss.h"
+#include "impact_detector.h"
 #include "imu.h"
 #include "time_capture.h"
 
@@ -17,15 +20,27 @@
  */
 void App_Init(void)
 {
-    printf("\r\nSTM32 Road Impact Detector\r\n");
+    if (!Console_Init())
+    {
+        Console_Printf("Console mutex creation failed\r\n");
+    }
+
+    Console_Printf("\r\nSTM32 Road Impact Detector\r\n");
 
     if (!TimeCapture_Init())
     {
-        printf("Time capture initialization failed\r\n");
+        Console_Printf("Time capture initialization failed\r\n");
+    }
+
+    ImpactDetector_Init();
+
+    if (!GNSS_Init())
+    {
+        Console_Printf("GNSS task creation failed\r\n");
     }
 
     if (!IMU_Init())
     {
-        printf("IMU task creation failed\r\n");
+        Console_Printf("IMU task creation failed\r\n");
     }
 }

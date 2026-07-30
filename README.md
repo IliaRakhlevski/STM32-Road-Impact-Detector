@@ -41,16 +41,20 @@ The system focuses on embedded firmware and does not attempt to classify detecte
 - GNSS PPS Capture through a 32-Bit Hardware Timer
 - Interrupt-Driven ICM-20948 Data Acquisition
 - Acceleration Conversion to Units of g
-- High-Resolution GNSS and IMU Timestamps
+- Common 1 MHz Timer Timestamps for GNSS PPS and IMU Interrupts
+- PPS-Based UTC Synchronization of IMU Measurements
+- Moving Acceleration Baseline and Impact Candidate Detection
+- Association of Impact Candidates with UTC and GNSS Position
 - Automatic I²C Recovery after IMU Communication Errors
-- Serial Diagnostics through the ST-LINK Virtual COM Port
+- Thread-Safe Serial Diagnostics through the ST-LINK Virtual COM Port
 
 ## Planned Next Steps
 
-- Road Impact Candidate Detection
-- Association of IMU Events with GNSS Position and UTC
-- FreeRTOS Communication between Acquisition and Processing Tasks
-- Event Reporting through the Diagnostic Serial Interface
+- Controlled Road Tests and Detection Threshold Selection
+- Reduction of Diagnostic Output for Normal Operation
+- Event Queueing and Compact Host Reporting
+- Stack, Heap, and Runtime Stability Measurements
+- Watchdog and Extended Fault Handling
 
 ---
 

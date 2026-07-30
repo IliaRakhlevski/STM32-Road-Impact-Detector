@@ -5,7 +5,9 @@
 
 #include "imu.h"
 
+#include "console.h"
 #include "i2c.h"
+#include "impact_detector.h"
 #include "time_capture.h"
 
 #include "FreeRTOS.h"
@@ -33,11 +35,11 @@
 /** Number of consecutive measurement bytes read from the ICM-20948. */
 #define IMU_MEASUREMENT_SIZE 14U
 
-/** Gyroscope sample-rate divider for approximately 10 Hz output. */
-#define IMU_GYROSCOPE_SAMPLE_RATE_DIVIDER 109U
+/** Gyroscope sample-rate divider for 100 Hz output. */
+#define IMU_GYROSCOPE_SAMPLE_RATE_DIVIDER 10U
 
-/** Accelerometer sample-rate divider for approximately 10 Hz output. */
-#define IMU_ACCELEROMETER_SAMPLE_RATE_DIVIDER 112U
+/** Accelerometer sample-rate divider for approximately 102 Hz output. */
+#define IMU_ACCELEROMETER_SAMPLE_RATE_DIVIDER 10U
 
 /** Positive half of the signed 16-bit accelerometer output range. */
 #define IMU_ACCELEROMETER_OUTPUT_RANGE 32768.0f
@@ -168,7 +170,7 @@ static bool IMU_SelectRegisterBank(IMU_RegisterBank bank)
  * @brief Configure the ICM-20948 for interrupt-driven measurements.
  *
  * The accelerometer and gyroscope are enabled with an output rate of
- * approximately 10 Hz. A rising edge is generated on INT when new raw sensor
+ * approximately 100 Hz. A rising edge is generated on INT when new raw sensor
  * data are ready.
  *
  * @return true if all configuration registers were written successfully;
@@ -264,8 +266,6 @@ static bool IMU_Recover(void)
 static void IMU_Task(void *argument)
 {
     IMU_Data data;
-    float acceleration_magnitude;
-    uint32_t acceleration_magnitude_hundredths;
 
     (void)argument;
 
@@ -277,13 +277,13 @@ static void IMU_Task(void *argument)
 
     if (!IMU_Configure())
     {
-        printf("IMU: configuration failed\r\n");
+        Console_Printf("IMU: configuration failed\r\n");
         vTaskDelete(NULL);
         return;
     }
 
-    printf("IMU: measurement interrupt enabled\r\n");
-    printf("IMU: accelerometer range=+/-%u g\r\n", imu_accelerometer_full_scale_g);
+    Console_Printf("IMU: measurement interrupt enabled\r\n");
+    Console_Printf("IMU: accelerometer range=+/-%u g\r\n", imu_accelerometer_full_scale_g);
 
     for (;;)
     {
@@ -291,32 +291,19 @@ static void IMU_Task(void *argument)
 
         if (IMU_Read(&data))
         {
-            acceleration_magnitude = IMU_CalculateAccelerationMagnitude(&data);
-            acceleration_magnitude_hundredths = (uint32_t)(acceleration_magnitude * 100.0f + 0.5f);
-
-            printf("IMU: INT=%lu, ACC=[%d, %d, %d], |ACC|=%lu.%02lu g, GYRO=[%d, %d, %d], TEMP=%d\r\n",
-                   (unsigned long)data.interrupt_sequence,
-                   data.accelerometer_x,
-                   data.accelerometer_y,
-                   data.accelerometer_z,
-                   (unsigned long)(acceleration_magnitude_hundredths / 100U),
-                   (unsigned long)(acceleration_magnitude_hundredths % 100U),
-                   data.gyroscope_x,
-                   data.gyroscope_y,
-                   data.gyroscope_z,
-                   data.temperature);
+            ImpactDetector_ProcessSample(&data);
         }
         else
         {
-            printf("IMU: measurement read failed\r\n");
+            Console_Printf("IMU: measurement read failed\r\n");
 
             while (!IMU_Recover())
             {
-                printf("IMU: recovery failed, retrying\r\n");
+                Console_Printf("IMU: recovery failed, retrying\r\n");
                 vTaskDelay(pdMS_TO_TICKS(IMU_RECOVERY_DELAY_MS));
             }
 
-            printf("IMU: communication recovered\r\n");
+            Console_Printf("IMU: communication recovered\r\n");
         }
     }
 }
@@ -330,7 +317,7 @@ bool IMU_Init(void)
 {
     return (xTaskCreate(IMU_Task,
                         "IMU",
-                        256U,
+                        512U,
                         NULL,
                         tskIDLE_PRIORITY + 1U,
                         &imu_task_handle) == pdPASS);
@@ -355,25 +342,25 @@ bool IMU_Test(void)
     }
     else
     {
-        printf("IMU: device not found at address 0x68 or 0x69\r\n");
+        Console_Printf("IMU: device not found at address 0x68 or 0x69\r\n");
         return false;
     }
 
     if (HAL_I2C_Mem_Read(&hi2c1, imu_device_address, IMU_REGISTER_WHO_AM_I, I2C_MEMADD_SIZE_8BIT, &who_am_i, 1U, IMU_I2C_TIMEOUT_MS) != HAL_OK)
     {
-        printf("IMU: failed to read WHO_AM_I\r\n");
+        Console_Printf("IMU: failed to read WHO_AM_I\r\n");
         return false;
     }
 
-    printf("IMU: address=0x%02X, WHO_AM_I=0x%02X\r\n", (unsigned int)(imu_device_address >> 1U), (unsigned int)who_am_i);
+    Console_Printf("IMU: address=0x%02X, WHO_AM_I=0x%02X\r\n", (unsigned int)(imu_device_address >> 1U), (unsigned int)who_am_i);
 
     if (who_am_i != IMU_WHO_AM_I_VALUE)
     {
-        printf("IMU: unexpected WHO_AM_I value\r\n");
+        Console_Printf("IMU: unexpected WHO_AM_I value\r\n");
         return false;
     }
 
-    printf("IMU: ICM-20948 detected\r\n");
+    Console_Printf("IMU: ICM-20948 detected\r\n");
     return true;
 }
 
@@ -412,6 +399,7 @@ bool IMU_Read(IMU_Data *data)
     data->gyroscope_y = IMU_CombineBytes(measurement[8], measurement[9]);
     data->gyroscope_z = IMU_CombineBytes(measurement[10], measurement[11]);
     data->temperature = IMU_CombineBytes(measurement[12], measurement[13]);
+    data->acceleration_magnitude_g = IMU_CalculateAccelerationMagnitude(data);
     data->valid = TimeCapture_GetImu(&interrupt_event);
     data->interrupt_capture = interrupt_event.capture;
     data->interrupt_sequence = interrupt_event.sequence;

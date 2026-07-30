@@ -32,6 +32,6 @@ typedef struct
 
 bool GNSS_Init(void);
 
-bool GNSS_GetLatestFix(GNSS_Fix *fix);
+bool GNSS_GetFixForCapture(uint32_t capture, GNSS_Fix *fix, uint32_t *offset_us);
 
 #endif /* GNSS_H_ */
