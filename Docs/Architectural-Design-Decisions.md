@@ -204,21 +204,80 @@ base rate, this produces approximately 102 samples per second.
 
 ## Impact Candidate Detection
 
-The impact detector keeps a slowly changing acceleration baseline:
+The detector operates on the acceleration vector magnitude rather than on an
+individual sensor axis. The magnitude is calculated as:
 
-- Ten normal acceleration measurements form one baseline update group.
-- The group average is applied to the baseline with an update factor of 0.10.
-- Each new acceleration magnitude is compared with the baseline that existed
-  before the current disturbance.
-- A deviation of at least 0.20 g marks an impact candidate.
-- The sample with the greatest deviation supplies the event timestamp.
-- A candidate ends after three consecutive measurements return below the
-  threshold.
+`|a| = sqrt(ax² + ay² + az²)`
+
+This makes the initial detector independent of the orientation of the IMU axes
+relative to the vehicle. A stationary sensor measures a magnitude close to 1 g
+because gravity is included.
+
+### Initial Baseline
+
+The first ten valid IMU samples are averaged to establish the initial
+acceleration baseline. Candidate detection does not run until this first
+baseline is available. Consequently, the earliest sample that can open a
+candidate is the eleventh valid sample after initialization.
+
+These first ten samples are assumed to represent normal operation; the
+firmware cannot verify this before a reference exists. Starting the system
+during a strong disturbance can therefore bias the initial baseline. A future
+startup-calibration improvement may require several stable groups before the
+baseline is accepted.
+
+### Per-Sample Detection
+
+After initialization, every individual acceleration sample is compared with
+the current baseline:
+
+`deviation = abs(current magnitude - baseline)`
+
+The absolute value allows both positive and negative changes in acceleration
+magnitude to be detected. A deviation of at least 0.20 g opens an impact
+candidate immediately, even if only one sample crosses the threshold. This
+preserves sensitivity to short impacts that may occupy only one sample at the
+approximately 102.3 Hz IMU output rate.
+
+An active candidate may contain several threshold crossings. The sample with
+the greatest absolute deviation is retained as the candidate peak. Its
+acceleration magnitude, reference baseline, TIM2 capture and IMU interrupt
+sequence become the representative event data.
+
+Any threshold crossing resets the count of normal samples following the
+candidate peak. The candidate is completed only after three consecutive
+samples fall below the threshold. At approximately 102.3 samples per second,
+this represents about 29 ms of continuous return toward the baseline. The
+three-sample requirement prevents a brief dip below the threshold from
+splitting one oscillating disturbance into multiple candidates.
+
+### Baseline Update
+
+Samples are added to the baseline calculation only while no candidate is
+active. This prevents the disturbance from moving the reference toward itself.
+When a new candidate opens, any partially collected normal group is discarded.
+
+Ten eligible samples form one baseline update group. The group average does
+not replace the baseline directly; the baseline moves 10% toward it:
+
+`new baseline = old baseline + 0.10 × (group average - old baseline)`
+
+This low-pass update follows slow changes such as vehicle attitude while
+remaining relatively insensitive to short disturbances. When the third
+consecutive below-threshold sample completes a candidate, that same sample
+becomes the first member of the next normal baseline group.
+
+### Candidate Meaning and Limitations
 
 The output deliberately uses the term *impact candidate*. Acceleration alone
 cannot reliably classify a pothole, speed bump, road joint, or another source
-of vehicle motion. The current threshold is experimental and must be validated
-in controlled road tests.
+of vehicle motion. A single noisy sample can also open a candidate because the
+current algorithm does not require multiple above-threshold samples.
+
+The 0.20 g threshold, ten-sample averaging group, 0.10 baseline update factor
+and three-sample completion rule are experimental parameters. They must be
+validated together in controlled road tests because changing any one of them
+affects sensitivity, response time and false-positive behavior.
 
 
 ## GNSS and IMU Data Association

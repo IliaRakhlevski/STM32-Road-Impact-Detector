@@ -67,6 +67,26 @@ static GNSS_Fix gnss_previous_fix;
 /**
  * @brief Parse a complete GGA sentence and print valid coordinates.
  *
+ * The GNSS module outputs position data as NMEA 0183 ASCII sentences. A
+ * standard sentence starts with '$', contains comma-separated fields, ends
+ * with a checksum after '*', and is terminated by <CR><LF>.
+ *
+ * GGA (Global Positioning System Fix Data) contains the UTC fix time,
+ * latitude, longitude, fix quality, number of satellites used, HDOP,
+ * altitude and geoid separation.
+ *
+ * The two characters before GGA are the NMEA talker ID:
+ * - $GNGGA reports a fix calculated from multiple GNSS constellations.
+ * - $GPGGA reports a fix identified with the GPS talker ID.
+ * Both variants have the same GGA field layout and are accepted here.
+ *
+ * Example:
+ * $GNGGA,040143.000,3149.334166,N,11706.941670,E,2,36,0.48,61.496,M,-0.335,M,,*58
+ *          UTC        latitude  N   longitude  E fix sats HDOP altitude
+ *
+ * See Sections 2.1 and 2.2.2, document pages 14-15 and 18-20:
+ * https://www.quectel.com/content/uploads/2024/04/Quectel_LC26GLC26G-TLC76GLC86G_Series_GNSS_Protocol_Specification_V1.5.pdf
+ *
  * @param sentence Null-terminated NMEA sentence.
  */
 static void GNSS_ParseGga(char *sentence)
@@ -82,8 +102,6 @@ static void GNSS_ParseGga(char *sentence)
         return;
     }
 
-    Console_Printf("GNSS RX: %s", sentence);
-
     fields[0] = sentence;
 
     for (char *character = sentence; (*character != '\0') && (field_count < GNSS_GGA_FIELD_COUNT); character++)
@@ -98,22 +116,27 @@ static void GNSS_ParseGga(char *sentence)
 
     if (field_count < GNSS_GGA_FIELD_COUNT)
     {
-        Console_Printf("GNSS: incomplete GGA sentence\r\n");
         return;
     }
 
+    /*
+     * Fix quality 0 means that the GGA sentence is valid, but the receiver
+     * does not currently have a usable GNSS position fix.
+     */
     if (fields[GNSS_GGA_FIELD_FIX_QUALITY][0] == '0')
     {
-        Console_Printf("GNSS: GGA received, but satellite fix is not valid\r\n");
         return;
     }
 
+    /*
+     * A valid position requires both coordinates and their hemisphere
+     * indicators. Reject an incomplete GGA sentence before copying its fields.
+     */
     if ((fields[GNSS_GGA_FIELD_LATITUDE][0] == '\0') ||
         (fields[GNSS_GGA_FIELD_LATITUDE_DIRECTION][0] == '\0') ||
         (fields[GNSS_GGA_FIELD_LONGITUDE][0] == '\0') ||
         (fields[GNSS_GGA_FIELD_LONGITUDE_DIRECTION][0] == '\0'))
     {
-        Console_Printf("GNSS: GGA fix has no coordinates\r\n");
         return;
     }
 
@@ -132,14 +155,6 @@ static void GNSS_ParseGga(char *sentence)
     gnss_latest_fix = new_fix;
     taskEXIT_CRITICAL();
 
-    if (new_fix.valid)
-    {
-        Console_Printf("GNSS fix: UTC=%s, PPS=%lu, position=%s %c, %s %c\r\n", new_fix.utc_time, (unsigned long)new_fix.pps_sequence, new_fix.latitude, new_fix.latitude_direction, new_fix.longitude, new_fix.longitude_direction);
-    }
-    else
-    {
-        Console_Printf("GNSS: valid GGA received, but PPS is unavailable\r\n");
-    }
 }
 
 /**

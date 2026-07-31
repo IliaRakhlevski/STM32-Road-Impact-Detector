@@ -37,7 +37,7 @@ The system focuses on embedded firmware and does not attempt to classify detecte
 
 - FreeRTOS Tasks for GNSS and IMU Acquisition
 - GNSS NMEA Reception through UART with DMA
-- GNGGA Position and UTC Parsing
+- GNGGA and GPGGA Position and UTC Parsing
 - GNSS PPS Capture through a 32-Bit Hardware Timer
 - Interrupt-Driven ICM-20948 Data Acquisition
 - Acceleration Conversion to Units of g
