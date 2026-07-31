@@ -7,18 +7,19 @@ Its purpose is to explain **why** a solution was selected. Peripheral settings a
 
 ## Project Scope
 
-The system detects road impact events and associates them with GNSS position and time data.
+The system detects road impact candidates from ICM-20948 acceleration measurements and associates them with GNSS position and PPS-referenced UTC timestamps.
 
 It does not attempt to classify an event as a pothole, speed bump, road joint, or another specific road feature. Reliable semantic classification would require additional sensing and processing, such as a camera and image analysis, which are outside the embedded focus of this project.
 
 The project therefore concentrates on:
 
-- Real-Time Sensor Acquisition
-- Impact Candidate Detection
-- Accurate Event Timestamps
-- GNSS Position Acquisition
+- Interrupt-Driven IMU Acceleration Acquisition
+- GNSS Position and UTC Acquisition
+- GNSS PPS and IMU Timestamp Capture
+- PPS-Based Time Synchronization
+- Acceleration-Baseline Impact Candidate Detection
 - FreeRTOS Synchronization and Inter-Task Communication
-- Embedded Diagnostics and Fault Handling
+- Automatic IMU I2C Communication Recovery
 
 
 ## Target Hardware
@@ -90,13 +91,16 @@ Reference:
 
 The system uses the 8 MHz external clock supplied by the ST-LINK MCO output. STM32CubeMX therefore configures the clock input as **HSE Bypass**.
 
-HSE was selected instead of the internal HSI RC oscillator because it provides a more stable and predictable local frequency reference. This matters when measuring intervals between GNSS PPS edges and timestamping IMU samples and impact events.
+The 8 MHz HSE bypass clock supplied by the on-board ST-LINK MCO was selected instead of the STM32F756 internal 16 MHz HSI RC oscillator. The STM32F756xx datasheet specifies an HSI accuracy of +/-1% at 25 degrees Celsius and a larger possible variation over temperature. Avoiding this RC-oscillator tolerance provides a more suitable local frequency reference for measuring intervals between GNSS PPS edges and timestamping IMU samples and impact events.
 
 The clock tree produces a 216 MHz system clock. APB prescalers remain within the STM32F756 limits while providing suitable timer clocks.
 
 HSE does not replace GNSS PPS. It improves short-term local timing stability between PPS edges, while PPS remains the external timing reference used to observe and correct local timer error.
 
-The 8 MHz MCO clock connection is documented in [UM1974, Section 7.8.1 — OSC clock supply, page 26](https://www.st.com/resource/en/user_manual/dm00244518-stm32-nucleo-144-boards-mb1137-stmicroelectronics.pdf#page=26).
+References:
+
+- [STM32F756xx Datasheet](https://www.st.com/resource/en/datasheet/stm32f756zg.pdf), Section 6.3.10, Table 42, page 133: HSI oscillator characteristics and accuracy.
+- [STM32 Nucleo-144 User Manual UM1974](https://www.st.com/resource/en/user_manual/dm00244518-nucleo-144-boards-mb1137-stmicroelectronics.pdf), Section 7.8.1, page 26: default 8 MHz ST-LINK MCO connection to the STM32 HSE input.
 
 
 ## HAL and FreeRTOS Time Bases
@@ -125,7 +129,7 @@ diagnostics are retained temporarily while the GNSS and IMU integration is
 being verified.
 
 
-## GNSS PPS and NMEA Timing
+## GNSS PPS and NMEA Association
 
 GNSS data is received through USART2 using circular DMA, while the PPS rising
 edge is captured by TIM2 channel 1. TIM2 is a free-running 32-bit timer
@@ -161,14 +165,15 @@ implementation consistent with the FreeRTOS programming model used during
 development.
 
 
-## Common Timestamp Capture
+## Common GNSS and IMU Timestamp Capture
 
 TIM2 is configured as a free-running 32-bit counter with a frequency of 1 MHz.
 Its two input-capture channels provide timestamps from the same local time
 base:
 
 - Channel 1 captures the GNSS PPS rising edge.
-- Channel 2 captures the ICM-20948 data-ready interrupt.
+- Channel 2 captures the rising edge from the ICM-20948 `INT1` data-ready
+  output.
 
 The common time-capture module owns the HAL timer callback and separates events
 according to the active timer channel. Each captured event contains the timer
@@ -178,12 +183,23 @@ This arrangement allows an IMU measurement to be related to GNSS time without
 using the execution time of a FreeRTOS task as the timestamp.
 
 
-## IMU Acquisition
+## IMU Data-Ready Interrupt and Acquisition Timing
 
-The ICM-20948 is connected through I²C1 and its data-ready output is connected
-to TIM2 channel 2. The interrupt callback only records the timestamp and
-notifies the IMU task; register access and diagnostic output remain in task
-context.
+The ICM-20948 is connected through I²C1. Its `RAW_DATA_0_RDY_EN` interrupt is
+enabled so the sensor generates a pulse on the `INT1` pin whenever a new raw
+measurement is ready. This signal is connected to TIM2 channel 2 and has an
+output rate of approximately 102.3 Hz with the current sample-rate divider.
+
+The rising edge on `INT1` causes TIM2 to capture its counter value in hardware.
+The interrupt callback records this timestamp and notifies the IMU task. The
+task subsequently reads the measurement registers through I²C and associates
+the returned values with the captured interrupt timestamp.
+
+Separating timestamp capture from register access is important because task
+scheduling and the blocking I²C transaction introduce variable delay. The
+execution time of the IMU task therefore does not determine the measurement
+timestamp. Register access, calculations, and diagnostic output remain in task
+context rather than being performed inside the interrupt callback.
 
 The current implementation reads raw acceleration, angular velocity, and
 internal temperature in one consecutive register transaction. Only
@@ -193,10 +209,8 @@ not part of the current detection decision.
 
 The accelerometer full-scale setting is read from `ACCEL_CONFIG` during sensor
 initialization. The firmware derives the selected range from `ACCEL_FS_SEL`
-instead of relying on a fixed sensitivity constant. Raw acceleration is then
-converted to units of g and combined into the magnitude:
-
-`|a| = sqrt(ax² + ay² + az²)`
+instead of relying on a fixed sensitivity constant. Raw acceleration values
+are then converted to units of g for use by the impact-detection algorithm.
 
 The accelerometer sample-rate divider is 10. With the 1.125 kHz accelerometer
 base rate, this produces approximately 102 samples per second.
@@ -341,7 +355,7 @@ The following topics have not yet been finalized:
 
 - Controlled Threshold Validation and False-Positive Reduction
 - Additional IMU Filtering
-- PPS Synchronization and Clock-Correction Algorithm
+- TIM2 Frequency-Error Measurement and Correction Using GNSS PPS
 - Compact Event Queueing and Host Reporting
 - Production Logging Level
 - Watchdog and Fault-Handling Strategy
