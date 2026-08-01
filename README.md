@@ -14,6 +14,15 @@ The system focuses on embedded firmware and does not attempt to classify detecte
 - Pimoroni ICM-20948 IMU breakout board
 - Quectel LC86G-LA GNSS module on an HW-658 development board
 
+> **Important — GNSS module identification**
+>
+> Although the HW-658 board and its metal shield are marked `L80-M39`, the receiver identifies itself through UART as:
+>
+> - `$PQTMVER,MODULE,LC86GLANR01A03S,2022/07/01,17:23:16`
+> - `$PAIR021,AG3352Q_V2.1.1.AG3352_20220701,...`
+>
+> These responses identify the installed receiver as a Quectel `LC86G-LA` based on the AG3352Q platform. It accepts the Quectel PAIR command protocol and does not accept the PMTK command set associated with the L80 family. The installed firmware is an older build dated 2022-07-01 and does not support the `$PAIR751` PPS-to-NMEA synchronization command. The project documentation and firmware therefore identify and treat the receiver as an `LC86G-LA`.
+
 | STM32 NUCLEO-F756ZG | Pimoroni ICM-20948 | Quectel LC86G-LA GNSS |
 |:---:|:---:|:---:|
 | <img src="Docs/Images/nucleo-f756zg-board.jpeg" alt="STM32 NUCLEO-F756ZG" width="240"> | <img src="Docs/Images/icm-20948-breakout-front.jpg" alt="Pimoroni ICM-20948" width="240"> | <img src="Docs/Images/quectel-l80-gnss-board-front.jpg" alt="Quectel LC86G-LA GNSS development board" width="240"> |
@@ -151,7 +160,7 @@ The output deliberately uses the term *impact candidate*. Acceleration alone can
 | NUCLEO-F756ZG / ST-LINK Virtual COM Port | USART3_TX | PD8 | Diagnostic output from the STM32 to the host terminal |
 | NUCLEO-F756ZG / ST-LINK Virtual COM Port | USART3_RX | PD9 | Host-to-STM32 serial input |
 
-The documented prototype powers both sensor boards from the NUCLEO `3V3` output, and all connected modules share a common ground. The HW-658 carrier board does not regulate its external `VCC` input to 3.3 V before supplying the GNSS module. Its `VCC` pin must therefore be connected to the NUCLEO `3V3` output and must not be connected to `5V`. The LC86G-LA itself has a recommended `VCC` range of 2.55-3.6 V and an absolute maximum of 3.63 V.
+The documented prototype powers both sensor boards from the NUCLEO `3V3` output, and all connected modules share a common ground. The HW-658 carrier board does not regulate its external `VCC` input to 3.3 V before supplying the GNSS module. **Its `VCC` pin must therefore be connected to the NUCLEO `3V3` output and must not be connected to `5V`.** The LC86G-LA itself has a recommended `VCC` range of 2.55-3.6 V and an absolute maximum of 3.63 V.
 
 ---
 
