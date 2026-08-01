@@ -1,0 +1,185 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1120" viewBox="0 0 1800 1120">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f8fbff"/>
+      <stop offset="1" stop-color="#f4f7f9"/>
+    </linearGradient>
+    <linearGradient id="stm" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#eef8f7"/>
+      <stop offset="1" stop-color="#f7fbfb"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="5" stdDeviation="8" flood-color="#152536" flood-opacity="0.12"/>
+    </filter>
+    <marker id="blueArrow" markerWidth="12" markerHeight="12" refX="12" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L12,6 L0,12 z" fill="#2463d4"/>
+    </marker>
+    <marker id="greenArrow" markerWidth="12" markerHeight="12" refX="12" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L12,6 L0,12 z" fill="#159447"/>
+    </marker>
+    <marker id="purpleArrow" markerWidth="12" markerHeight="12" refX="12" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L12,6 L0,12 z" fill="#7541b2"/>
+    </marker>
+    <marker id="orangeArrow" markerWidth="12" markerHeight="12" refX="12" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L12,6 L0,12 z" fill="#df7900"/>
+    </marker>
+    <marker id="grayArrow" markerWidth="12" markerHeight="12" refX="12" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L12,6 L0,12 z" fill="#536273"/>
+    </marker>
+    <style>
+      .title { font: 700 34px 'Segoe UI', Arial, sans-serif; fill: #152536; }
+      .subtitle { font: 400 17px 'Segoe UI', Arial, sans-serif; fill: #556474; }
+      .group-title { font: 700 25px 'Segoe UI', Arial, sans-serif; fill: #16343a; }
+      .card-title { font: 700 21px 'Segoe UI', Arial, sans-serif; fill: #172330; }
+      .card-sub { font: 600 16px 'Segoe UI', Arial, sans-serif; fill: #455565; }
+      .body { font: 400 16px 'Segoe UI', Arial, sans-serif; fill: #263746; }
+      .small { font: 500 14px 'Segoe UI', Arial, sans-serif; fill: #516273; }
+      .arrow-label { font: 700 15px 'Segoe UI', Arial, sans-serif; paint-order: stroke; stroke: #f8fbff; stroke-width: 5px; stroke-linejoin: round; }
+    </style>
+  </defs>
+
+  <rect width="1800" height="1120" fill="url(#bg)"/>
+  <text x="900" y="54" text-anchor="middle" class="title">STM32 Road Impact Detector — System Architecture</text>
+  <text x="900" y="84" text-anchor="middle" class="subtitle">Interrupt-driven sensor acquisition, common hardware timestamps, and GNSS-associated impact candidates</text>
+
+  <!-- GNSS sensor -->
+  <g filter="url(#shadow)">
+    <rect x="45" y="150" width="330" height="315" rx="20" fill="#f2f7ff" stroke="#2463d4" stroke-width="2.5"/>
+  </g>
+  <circle cx="100" cy="212" r="31" fill="#2463d4"/>
+  <path d="M81 218c12-13 26-13 38 0M88 226c8-8 16-8 24 0M100 237v-1" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
+  <path d="M78 200c15-18 30-18 44 0" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
+  <text x="145" y="205" class="card-title">Quectel LC86G-LA</text>
+  <text x="145" y="231" class="card-sub">GNSS Module</text>
+  <line x1="75" y1="258" x2="345" y2="258" stroke="#c7d8f3"/>
+  <text x="77" y="292" class="body">• GGA position and UTC</text>
+  <text x="77" y="326" class="body">• 1 PPS timing reference</text>
+  <text x="77" y="360" class="body">• NMEA output through UART</text>
+  <rect x="76" y="389" width="116" height="39" rx="9" fill="#dce9ff"/>
+  <text x="134" y="414" text-anchor="middle" class="card-sub" fill="#174fab">USART2</text>
+  <rect x="211" y="389" width="115" height="39" rx="9" fill="#eee5fb"/>
+  <text x="268" y="414" text-anchor="middle" class="card-sub" fill="#7541b2">PPS</text>
+
+  <!-- IMU sensor -->
+  <g filter="url(#shadow)">
+    <rect x="45" y="610" width="330" height="315" rx="20" fill="#f0fbf4" stroke="#159447" stroke-width="2.5"/>
+  </g>
+  <rect x="70" y="670" width="61" height="61" rx="9" fill="#159447"/>
+  <rect x="84" y="684" width="33" height="33" rx="4" fill="none" stroke="#fff" stroke-width="4"/>
+  <path d="M75 662v-12m16 12v-12m16 12v-12m16 12v-12M75 751v-12m16 12v-12m16 12v-12m16 12v-12M62 676H50m12 16H50m12 16H50m12 16H50m93-48h12m-12 16h12m-12 16h12m-12 16h12" stroke="#159447" stroke-width="4"/>
+  <text x="157" y="677" class="card-title">ICM-20948</text>
+  <text x="157" y="703" class="card-sub">9-Axis IMU</text>
+  <line x1="75" y1="755" x2="345" y2="755" stroke="#c9e6d2"/>
+  <text x="77" y="789" class="body">• Acceleration at ~102.3 Hz</text>
+  <text x="77" y="823" class="body">• RAW_DATA_0_RDY interrupt</text>
+  <text x="77" y="857" class="body">• Burst register read</text>
+  <rect x="76" y="874" width="116" height="39" rx="9" fill="#d9f2e1"/>
+  <text x="134" y="899" text-anchor="middle" class="card-sub" fill="#117638">I²C1</text>
+  <rect x="211" y="874" width="115" height="39" rx="9" fill="#fff0db"/>
+  <text x="268" y="899" text-anchor="middle" class="card-sub" fill="#b86400">INT1</text>
+
+  <!-- STM32 boundary -->
+  <g filter="url(#shadow)">
+    <rect x="475" y="115" width="920" height="870" rx="28" fill="url(#stm)" stroke="#16867d" stroke-width="3"/>
+  </g>
+  <text x="935" y="158" text-anchor="middle" class="group-title">NUCLEO-F756ZG — STM32F756ZGT6 + FreeRTOS</text>
+  <text x="935" y="184" text-anchor="middle" class="small">216 MHz Cortex-M7 • interrupt-driven acquisition • short ISR callbacks</text>
+
+  <!-- USART DMA -->
+  <rect x="535" y="228" width="255" height="155" rx="17" fill="#edf4ff" stroke="#2463d4" stroke-width="2"/>
+  <text x="662" y="264" text-anchor="middle" class="card-title">USART2 + DMA</text>
+  <text x="662" y="292" text-anchor="middle" class="card-sub">Circular RX Buffer</text>
+  <text x="562" y="329" class="body">• Receive-to-idle events</text>
+  <text x="562" y="357" class="body">• NMEA byte stream</text>
+
+  <!-- GNSS task -->
+  <rect x="895" y="228" width="315" height="155" rx="17" fill="#edf4ff" stroke="#2463d4" stroke-width="2"/>
+  <text x="1052" y="264" text-anchor="middle" class="card-title">GNSS Task</text>
+  <text x="1052" y="292" text-anchor="middle" class="card-sub">NMEA Parser + Fix Association</text>
+  <text x="922" y="329" class="body">• Parses GNGGA / GPGGA</text>
+  <text x="922" y="357" class="body">• Stores UTC, position, PPS</text>
+
+  <!-- TIM2 -->
+  <rect x="715" y="444" width="440" height="175" rx="18" fill="#f4effb" stroke="#7541b2" stroke-width="2.5"/>
+  <circle cx="766" cy="493" r="25" fill="#7541b2"/>
+  <path d="M766 477v17l12 8" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="935" y="485" text-anchor="middle" class="card-title">TIM2 Common Time Capture</text>
+  <text x="935" y="515" text-anchor="middle" class="card-sub">32-bit free-running counter at 1 MHz</text>
+  <text x="754" y="555" class="body">CH1: GNSS PPS rising edge</text>
+  <text x="754" y="587" class="body">CH2: IMU INT1 rising edge</text>
+
+  <!-- IMU task -->
+  <rect x="535" y="688" width="315" height="190" rx="17" fill="#effaf3" stroke="#159447" stroke-width="2"/>
+  <text x="692" y="727" text-anchor="middle" class="card-title">IMU Task</text>
+  <text x="692" y="755" text-anchor="middle" class="card-sub">Interrupt-Driven Acquisition</text>
+  <text x="562" y="793" class="body">• Reads sensor through I²C1</text>
+  <text x="562" y="823" class="body">• Converts raw values to g</text>
+  <text x="562" y="853" class="body">• Attaches captured timestamp</text>
+
+  <!-- Impact detector -->
+  <rect x="1010" y="688" width="315" height="190" rx="17" fill="#fff7eb" stroke="#df7900" stroke-width="2.5"/>
+  <text x="1167" y="727" text-anchor="middle" class="card-title">Impact Detector</text>
+  <text x="1167" y="755" text-anchor="middle" class="card-sub">Acceleration-Baseline Algorithm</text>
+  <text x="1037" y="793" class="body">• Per-sample deviation check</text>
+  <text x="1037" y="823" class="body">• Candidate peak timestamp</text>
+  <text x="1037" y="853" class="body">• UTC + GNSS coordinates</text>
+
+  <!-- Internal arrows -->
+  <path d="M790 305 H895" fill="none" stroke="#2463d4" stroke-width="4" marker-end="url(#blueArrow)"/>
+  <text x="843" y="292" text-anchor="middle" class="arrow-label" fill="#2463d4">Task notify</text>
+
+  <path d="M1018 444 V383" fill="none" stroke="#7541b2" stroke-width="4" marker-end="url(#purpleArrow)"/>
+  <text x="1050" y="420" class="arrow-label" fill="#7541b2">PPS capture</text>
+
+  <path d="M785 619 V688" fill="none" stroke="#7541b2" stroke-width="4" marker-end="url(#purpleArrow)"/>
+  <text x="805" y="657" class="arrow-label" fill="#7541b2">Timestamp + notify</text>
+
+  <path d="M850 786 H1010" fill="none" stroke="#159447" stroke-width="4" marker-end="url(#greenArrow)"/>
+  <text x="930" y="773" text-anchor="middle" class="arrow-label" fill="#159447">IMU samples</text>
+
+  <path d="M1160 383 V412 H1245 V650 H1200 V688" fill="none" stroke="#2463d4" stroke-width="4" marker-end="url(#blueArrow)"/>
+  <text x="1260" y="535" class="arrow-label" fill="#2463d4">GNSS fix</text>
+
+  <!-- External sensor arrows -->
+  <path d="M375 300 H535" fill="none" stroke="#2463d4" stroke-width="5" marker-end="url(#blueArrow)"/>
+  <text x="455" y="286" text-anchor="middle" class="arrow-label" fill="#2463d4">NMEA UART</text>
+
+  <path d="M375 418 H430 V490 H715" fill="none" stroke="#7541b2" stroke-width="5" marker-end="url(#purpleArrow)"/>
+  <text x="520" y="477" text-anchor="middle" class="arrow-label" fill="#7541b2">PPS → TIM2 CH1 (PA0)</text>
+
+  <path d="M375 765 H455 V784 H535" fill="none" stroke="#159447" stroke-width="5" marker-end="url(#greenArrow)"/>
+  <path d="M535 814 H455 V795 H375" fill="none" stroke="#159447" stroke-width="5" marker-end="url(#greenArrow)"/>
+  <text x="455" y="750" text-anchor="middle" class="arrow-label" fill="#159447">I²C1</text>
+
+  <path d="M375 650 H430 V565 H715" fill="none" stroke="#df7900" stroke-width="5" marker-end="url(#orangeArrow)"/>
+  <text x="520" y="552" text-anchor="middle" class="arrow-label" fill="#df7900">INT1 → TIM2 CH2 (PB3)</text>
+
+  <!-- Host terminal -->
+  <g filter="url(#shadow)">
+    <rect x="1480" y="345" width="275" height="330" rx="20" fill="#fff5ed" stroke="#e46f24" stroke-width="2.5"/>
+  </g>
+  <rect x="1531" y="397" width="173" height="103" rx="9" fill="#263441"/>
+  <path d="M1548 420l18 15-18 15M1578 454h42" fill="none" stroke="#88f0b0" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="1577" y="500" width="82" height="13" rx="5" fill="#526879"/>
+  <text x="1617" y="552" text-anchor="middle" class="card-title">Host Terminal</text>
+  <text x="1617" y="580" text-anchor="middle" class="card-sub">ST-LINK Virtual COM Port</text>
+  <text x="1513" y="619" class="body">• Periodic GNSS / IMU status</text>
+  <text x="1513" y="649" class="body">• Impact candidate reports</text>
+
+  <path d="M1325 785 H1428 V555 H1480" fill="none" stroke="#536273" stroke-width="5" marker-end="url(#grayArrow)"/>
+  <text x="1415" y="708" transform="rotate(-90 1415 708)" text-anchor="middle" class="arrow-label" fill="#536273">USART3 — 115200 8N1</text>
+
+  <!-- Legend -->
+  <rect x="210" y="1030" width="1380" height="65" rx="15" fill="#ffffff" stroke="#ccd5dd"/>
+  <text x="244" y="1070" class="card-sub">Legend:</text>
+  <line x1="350" y1="1061" x2="415" y2="1061" stroke="#2463d4" stroke-width="5" marker-end="url(#blueArrow)"/>
+  <text x="432" y="1068" class="small">GNSS data</text>
+  <line x1="580" y1="1061" x2="645" y2="1061" stroke="#159447" stroke-width="5" marker-end="url(#greenArrow)"/>
+  <text x="662" y="1068" class="small">IMU data / I²C</text>
+  <line x1="850" y1="1061" x2="915" y2="1061" stroke="#7541b2" stroke-width="5" marker-end="url(#purpleArrow)"/>
+  <text x="932" y="1068" class="small">GNSS PPS / TIM2 capture</text>
+  <line x1="1150" y1="1061" x2="1215" y2="1061" stroke="#df7900" stroke-width="5" marker-end="url(#orangeArrow)"/>
+  <text x="1232" y="1068" class="small">IMU interrupt</text>
+  <line x1="1390" y1="1061" x2="1455" y2="1061" stroke="#536273" stroke-width="5" marker-end="url(#grayArrow)"/>
+  <text x="1472" y="1068" class="small">Diagnostics</text>
+</svg>
