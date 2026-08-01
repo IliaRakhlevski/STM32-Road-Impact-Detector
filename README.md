@@ -138,16 +138,20 @@ The output deliberately uses the term *impact candidate*. Acceleration alone can
 
 | Device | Signal | STM32F756ZG connection | Purpose |
 |:---|:---|:---|:---|
+| Quectel LC86G-LA GNSS receiver board | VCC | 3V3 | 3.3 V module power supply |
+| Quectel LC86G-LA GNSS receiver board | GND | GND | Common ground |
 | Quectel LC86G-LA GNSS receiver | TX | PD6 / USART2_RX | NMEA data reception |
 | Quectel LC86G-LA GNSS receiver | RX | PD5 / USART2_TX | GNSS command interface |
 | Quectel LC86G-LA GNSS receiver | PPS | PA0 / TIM2_CH1 | GNSS second-boundary capture |
+| Pimoroni ICM-20948 IMU board | 2-5V | 3V3 | 3.3 V board power supply |
+| Pimoroni ICM-20948 IMU board | GND | GND | Common ground |
 | ICM-20948 IMU | SCL | PB8 / I²C1_SCL | I²C clock |
 | ICM-20948 IMU | SDA | PB9 / I²C1_SDA | I²C data |
 | ICM-20948 IMU | INT1 | PB3 / TIM2_CH2 | Measurement-ready timestamp capture |
 | NUCLEO-F756ZG / ST-LINK Virtual COM Port | USART3_TX | PD8 | Diagnostic output from the STM32 to the host terminal |
 | NUCLEO-F756ZG / ST-LINK Virtual COM Port | USART3_RX | PD9 | Host-to-STM32 serial input |
 
-All connected modules must share a common ground. Power levels and module supply requirements must be verified before wiring the hardware.
+The documented prototype powers both sensor boards from the NUCLEO `3V3` output, and all connected modules share a common ground. The HW-658 carrier board does not regulate its external `VCC` input to 3.3 V before supplying the GNSS module. Its `VCC` pin must therefore be connected to the NUCLEO `3V3` output and must not be connected to `5V`. The LC86G-LA itself has a recommended `VCC` range of 2.55-3.6 V and an absolute maximum of 3.63 V.
 
 ---
 
@@ -169,6 +173,8 @@ The terminal output is intended for development and validation. The current firm
 
 - [Architectural Design Decisions](Docs/Architectural-Design-Decisions.md)
 - [ICM-20948 Datasheet](https://invensense.tdk.com/wp-content/uploads/2024/03/DS-000189-ICM-20948-v1.6.pdf)
+- [Quectel LC86G Series Hardware Design](https://www.quectel.com/content/uploads/2024/02/Quectel_LC86G_Series_Hardware_Design_V1.1.pdf)
+- [Quectel LC26G/LC76G/LC86G Series GNSS Protocol Specification](https://www.quectel.com/content/uploads/2024/04/Quectel_LC26GLC26G-TLC76GLC86G_Series_GNSS_Protocol_Specification_V1.5.pdf)
 - [STM32F756xx Datasheet](https://www.st.com/resource/en/datasheet/stm32f756zg.pdf)
 - [STM32 Nucleo-144 User Manual UM1974](https://www.st.com/resource/en/user_manual/dm00244518-nucleo-144-boards-mb1137-stmicroelectronics.pdf)
 
