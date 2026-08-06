@@ -1,6 +1,6 @@
 # STM32 Road Impact Detector
 
-## [Real Time College](https://rt-ed.co.il/) — a multi-disciplinary Real-Time O.S. and Embedded Software Solutions Center, providing consulting, development, integration, training, and support solutions.<br/>
+## [Real Time Group](https://rt-ed.co.il/) — a multi-disciplinary Real-Time O.S. and Embedded Software Solutions Center, providing consulting, development, integration, training, and support solutions.<br/>
 
 The project implements a real-time road impact detection system based on the STM32F756ZG microcontroller. An ICM-20948 IMU is used to detect impact candidates, while a Quectel LC86G-LA GNSS receiver provides position, time, and a PPS signal for accurate event timestamping.
 
