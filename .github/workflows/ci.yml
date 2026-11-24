@@ -1,0 +1,31 @@
+# CI for STM32RoadImpactDetector.
+#
+# On every push to main and on every pull request the firmware is built with
+# arm-none-eabi-gcc (same settings as the STM32CubeIDE Debug configuration).
+# Not covered here (needs the real hardware): running the firmware, the sensors.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  firmware-build:
+    name: STM32 - firmware build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install GNU Arm Embedded Toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-arm-none-eabi libnewlib-arm-none-eabi
+
+      - name: Build firmware
+        run: make -C STM32RoadImpactDetector

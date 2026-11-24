@@ -5,6 +5,9 @@
 **/Debug/
 **/Release/
 
+# Command-line (Makefile) build output
+STM32RoadImpactDetector/build/
+
 # Launch configurations
 *.launch
 
