@@ -18,6 +18,7 @@ jobs:
   firmware-build:
     name: STM32 - firmware build
     runs-on: ubuntu-latest
+    timeout-minutes: 15        # stop a stuck job instead of waiting up to 6 hours
 
     steps:
       - uses: actions/checkout@v4
@@ -25,7 +26,7 @@ jobs:
       - name: Install GNU Arm Embedded Toolchain
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc-arm-none-eabi libnewlib-arm-none-eabi
+          sudo apt-get install -y --no-install-recommends gcc-arm-none-eabi libnewlib-arm-none-eabi
 
       - name: Build firmware
         run: make -C STM32RoadImpactDetector
